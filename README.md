@@ -11,3 +11,6 @@ DOTA2和LOL的提示词都是AI生成的，借助提示词和json_object，显�
 
 从夯到拉的提示词是字符串模板，注意动态参数和占位字符串!  
 
+## 演示
+https://www.bilibili.com/video/BV1wAyZBkEu9/
+
