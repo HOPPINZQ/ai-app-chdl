@@ -1,0 +1,26 @@
+{
+  "categories": [
+    { "id": "strength", "name": "夯" },
+    { "id": "top", "name": "顶级" },
+    { "id": "good", "name": "人上人" },
+    { "id": "npc", "name": "NPC" },
+    { "id": "explode", "name": "拉爆了" }
+  ],
+  "items": [
+    { "id": "0", "title": "英雄联盟", "description": "多人在线战术竞技游戏", "tags": ["MOBA", "5v5"] },
+    { "id": "1", "title": "DOTA2", "description": "多人在线战术竞技游戏", "tags": ["MOBA", "5v5"] },
+    { "id": "2", "title": "绝地求生", "description": "大逃杀类射击游戏", "tags": ["射击", "100人"] },
+    { "id": "3", "title": "风暴英雄", "description": "多人在线战术竞技游戏", "tags": ["MOBA", "5v5"] },
+    { "id": "4", "title": "王者荣耀", "description": "移动端MOBA游戏", "tags": ["MOBA", "5v5"] },
+    { "id": "5", "title": "CS:GO", "description": "第一人称射击游戏", "tags": ["射击", "团队"] },
+    { "id": "6", "title": "原神", "description": "开放世界动作RPG", "tags": ["RPG", "开放世界"] },
+    { "id": "7", "title": "赛博朋克2077", "description": "开放世界RPG", "tags": ["RPG", "未来"] },
+    { "id": "8", "title": "Apex英雄", "description": "战术竞技射击游戏", "tags": ["射击", "3v3"] }
+  ],
+  "llm":{
+    "model":"deepseek-reasoner",
+    "apiKey":"sk-",
+    "apiBase":"https://api.deepseek.com"
+  },
+  "feature":"玩法，受欢迎程度，上手难度"
+}

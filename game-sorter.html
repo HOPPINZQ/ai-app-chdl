@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏分类拖拽系统</title>
+    <style>
+        /* 全局样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+            transform-origin: top left;
+            /* transform: scaleY(0.8); */
+            min-height: 133vh; /* 补偿缩放后的高度 */
+        }
+
+        body {
+            --app-background: #eaebf5;
+            --chat-background: #fff;
+            --link-color: #c0c1c5;
+            --navigation-bg: #fff;
+            --navigation-box-shadow: 0 2px 6px 0 rgba(136, 148, 171, 0.2), 0 24px 20px -24px rgba(71, 82, 107, 0.1);
+            --main-color: #3d42df;
+            --message-bg: #e0e0e2;
+            --message-bg-2: #3d42df;
+            --message-text: #2c303a;
+            --placeholder-text: #a2a4bc;
+            --button-bg: #fff;
+        }
+
+        body.dark {
+            --app-background: #262a42;
+            --navigation-box-shadow: 0px 0px 8px 0px #282b33;
+            --chat-background: #3c3f56;
+            --message-bg: #2c3046;
+            --message-text: rgba(255, 255, 255, 0.8);
+            --placeholder-text: #fff;
+            --navigation-bg: #3c3f56;
+            --button-bg: #3c3f56;
+            --main-color: #6f74ff;
+            --message-bg-2: #6f74ff;
+        }
+
+        /* 为了确保内容有足够空间 */
+        .content-wrapper {
+            padding: 20px;
+        }
+
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+
+        /* 分类列容器 */
+        .columns-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
+            min-height: 200px;
+            width: 100%;
+            max-width: 100%;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        /* 分类列 */
+        .category-column {
+            width: 100%;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            padding-top: 10px;
+            position: relative;
+            min-height: 100px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+
+        .category-column h2 {
+            text-align: left !important;
+            margin-top: 0;
+            margin-bottom: 10px;
+            padding: 0;
+            float: none;
+            display: block;
+        }
+
+
+        .category-column:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+
+        .category-column h2 {
+            text-align: center;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #e0e0e0;
+            color: #34495e;
+        }
+
+
+        .column-drop-zone {
+            min-height: 150px;
+            padding: 10px;
+            border: 2px dashed transparent;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+
+        /* 分类列中的游戏卡片 */
+        .category-column .game-card {
+            margin-bottom: 10px;
+            width: 100%;
+            width: auto;
+            max-width: 100%;
+            display: block;
+            clear: both;
+            float: none;
+        }
+
+
+        .column-drop-zone.active {
+            border-color: #3498db;
+            background-color: #f0f8ff;
+        }
+
+        /* 游戏卡片样式 */
+        .games-container {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .games-container h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #34495e;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .game-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            margin-bottom: 20px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            position: relative;
+            user-select: none;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .game-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .game-card:active {
+            cursor: grabbing;
+        }
+
+        .game-card.dragging {
+            opacity: 0.7;
+        }
+
+        /* 拖拽动画相关样式 */
+        .game-card.animating {
+            position: fixed;
+            z-index: 1000;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* 聊天框样式 */
+        .chat-container {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 350px;
+            height: 500px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            z-index: 999;
+            transition: height 0.3s ease;
+        }
+
+        .chat-header {
+            background-color: #4a6fa5;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .chat-header-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chat-toggle {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .chat-config-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .config-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .config-modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .config-modal h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .config-group {
+            margin-bottom: 20px;
+        }
+
+        .config-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #34495e;
+        }
+
+        .config-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .config-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .config-actions button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
+        }
+
+        .config-save {
+            background-color: #4a6fa5;
+            color: white;
+        }
+
+        .config-cancel {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        .chat-container.minimized {
+            height: 60px;
+        }
+
+        .chat-container.minimized .chat-toggle {
+            transform: rotate(180deg);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .chat-container.minimized .chat-messages,
+        .chat-container.minimized .chat-input-area {
+            display: none;
+        }
+
+        .chat-message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+
+        .chat-message.user {
+            background-color: #4a6fa5;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .chat-message.system {
+            background-color: #e0e0e0;
+            color: #333;
+            align-self: flex-start;
+        }
+
+        .chat-message p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .chat-input-area {
+            padding: 15px;
+            background-color: white;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .chat-input-area input:focus {
+            border-color: #4a6fa5;
+        }
+
+        .chat-input-area button {
+            background-color: #4a6fa5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
+        }
+
+        .chat-input-area button:hover {
+            background-color: #3a5f8a;
+        }
+
+        .chat-input-area button:active {
+            transform: scale(0.98);
+        }
+
+        .game-card h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+
+        .game-card p {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+
+        .game-meta {
+            font-size: 12px;
+            color: #95a5a6;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .ai-review {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 3px solid #3498db;
+            border-radius: 0 5px 5px 0;
+            font-size: 13px;
+        }
+
+        .ai-review strong {
+            color: #3498db;
+            margin-right: 5px;
+        }
+
+        .ai-review span {
+            color: #555;
+            font-style: italic;
+        }
+
+        /* 拖拽动画相关样式 */
+        .game-card.animating {
+            position: fixed;
+            z-index: 1000;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* 每个分类的特殊颜色 */
+        #column-strength h2 {
+            color: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        #column-top h2 {
+            color: #f39c12;
+            border-color: #f39c12;
+        }
+
+        #column-good h2 {
+            color: #59b68b;
+            border-color: #59b68b;
+        }
+
+        #column-npc h2 {
+            color: #9b59b6;
+            border-color: #9b59b6;
+        }
+
+        #column-bad h2 {
+            color: #e67e22;
+            border-color: #e67e22;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .columns-container {
+                flex-direction: column;
+            }
+
+            .category-column {
+                min-width: 100%;
+            }
+
+            .games-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
+
+        /* ai对话 */
+        .message-wrapper {
+            display: flex;
+        }
+
+        .name {
+            margin: 0;
+            line-height: 16px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--message-text);
+        }
+
+        .message {
+            margin-top: 8px;
+            background-color: var(--message-bg);
+            padding: 8px 16px;
+            border-radius: 0 12px 12px 12px;
+            font-size: 12px;
+            line-height: 16px;
+            max-width: calc(100% - 32px);
+            color: var(--message-text);
+        }
+
+        .message-wrapper {
+            padding: 16px 0;
+        }
+
+        .message-wrapper.reverse {
+            flex-direction: row-reverse;
+        }
+
+        .message-wrapper.reverse .message {
+            background-color: var(--message-bg-2);
+            color: #fff;
+            margin-left: auto;
+            border-radius: 16px 0px 16px 16px;
+        }
+
+        .message-wrapper.reverse .profile-picture {
+            margin-right: 0px;
+            margin-left: 12px;
+        }
+
+        .message-wrapper.reverse .name {
+            text-align: right;
+        }
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+            position: relative;
+        }
+
+        .user-message {
+            background-color: #4a5568;
+            color: white;
+            margin-left: auto;
+        }
+
+        .ai-message {
+            background-color: #e0e0e0;
+            color: #333;
+            margin-right: auto;
+            transition: all 0.2s ease;
+        }
+
+        .profile-picture {
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            overflow: hidden;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .profile-picture img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .chat-input-area {
+            padding: 20px;
+            background-color: white;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+        }
+
+        .send-message {
+            padding: 10px 20px;
+            background-color: #4a6fa5;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .send-message:hover {
+            background-color: #3a5a85;
+        }
+
+        .send-message:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .system-message {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* 工具调用样式 */
+        .tool-use {
+            background-color: #f0f4f8;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 8px 0;
+            font-family: monospace;
+            font-size: 14px;
+            color: #2d3748;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            transition: all 0.2s ease;
+        }
+
+        .tool-use:hover {
+            background-color: #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            margin-right: auto;
+            padding: 10px 15px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #666;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-5px);
+            }
+        }
+
+        /* 滚动条样式 */
+        /* 聊天消息区域滚动条 */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: rgba(241, 241, 241, 0.7);
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(136, 136, 136, 0.6);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(85, 85, 85, 0.8);
+            transform: scaleX(1.2);
+        }
+
+        /* 修复内容溢出问题 */
+        .reasoning-content, .chat-content div {
+            word-wrap: break-word;
+            word-break: break-all;
+            overflow-wrap: break-word;
+            white-space: normal;
+        }
+    </style>
+</head>
+<body>
+<!-- 聊天框组件 -->
+<div class="chat-container">
+    <div class="chat-header">
+        <h3>游戏讨论区</h3>
+        <div class="chat-header-controls">
+            <button class="chat-config-btn" id="chat-config-btn">⚙️</button>
+            <button class="chat-toggle" id="chat-toggle">▼</button>
+        </div>
+    </div>
+
+    <!-- 配置弹窗 -->
+    <div class="config-modal" id="config-modal" style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    ">
+        <div class="config-modal-content" style="
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        ">
+            <h2 style="
+                color: #4ecdc4;
+                text-align: center;
+                margin-bottom: 20px;
+                font-size: 1.8rem;
+            ">
+                大模型配置
+            </h2>
+
+            <div style="margin-bottom: 20px;">
+                <label style="
+                    display: block;
+                    color: #fff;
+                    margin-bottom: 8px;
+                    font-weight: bold;
+                ">
+                    代理地址:
+                </label>
+                <input
+                        type="text"
+                        id="api-base"
+                        placeholder="例如: http://localhost:3000/v1"
+                        style="
+                        width: 100%;
+                        padding: 10px;
+                        border: 2px solid #4a4a4a;
+                        border-radius: 5px;
+                        background-color: #3a3a3a;
+                        color: #fff;
+                        font-size: 1rem;
+                    "
+                />
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="
+                    display: block;
+                    color: #fff;
+                    margin-bottom: 8px;
+                    font-weight: bold;
+                ">
+                    API Key:
+                </label>
+                <input
+                        type="password"
+                        id="api-key"
+                        placeholder="sk-..."
+                        style="
+                        width: 100%;
+                        padding: 10px;
+                        border: 2px solid #4a4a4a;
+                        border-radius: 5px;
+                        background-color: #3a3a3a;
+                        color: #fff;
+                        font-size: 1rem;
+                    "
+                />
+            </div>
+
+            <div style="margin-bottom: 30px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label style="
+                        display: block;
+                        color: #fff;
+                        font-weight: bold;
+                    ">
+                        对话大模型:
+                    </label>
+                    <button
+                            id="refresh-models"
+                            style="
+                            padding: 5px 15px;
+                            background: #4a4a4a;
+                            color: #fff;
+                            border: none;
+                            border-radius: 20px;
+                            font-size: 0.8rem;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                        "
+                    >
+                        刷新模型列表
+                    </button>
+                </div>
+                <select
+                        id="model-select"
+                        style="
+                        width: 100%;
+                        padding: 10px;
+                        border: 2px solid #4a4a4a;
+                        border-radius: 5px;
+                        background-color: #3a3a3a;
+                        color: #fff;
+                        font-size: 1rem;
+                    "
+                >
+                    <!-- 模型选项会动态填充 -->
+                </select>
+                <div id="model-status" style="
+                    margin-top: 5px;
+                    font-size: 0.8rem;
+                    color: #666;
+                    text-align: right;
+                ">
+                    使用默认模型列表
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button
+                        id="config-cancel"
+                        style="
+                        padding: 10px 30px;
+                        background: #666;
+                        color: #fff;
+                        border: none;
+                        border-radius: 30px;
+                        font-size: 1rem;
+                        font-weight: bold;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                    "
+                >
+                    取消
+                </button>
+                <button
+                        id="config-save"
+                        style="
+                        padding: 10px 30px;
+                        background: linear-gradient(135deg, #4ecdc4, #45b7aa);
+                        color: #fff;
+                        border: none;
+                        border-radius: 30px;
+                        font-size: 1rem;
+                        font-weight: bold;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                    "
+                >
+                    保存设置
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="chat-messages chat-area" id="chat-area">
+        <div class="message-wrapper">
+            <div class="profile-picture">
+                <img alt="participant" src="img/npc_dota_hero_void_spirit.gif"></div>
+            <div class="message-content">
+                <p class="name">HOPPINAI</p>
+                <div class="message">你好啊，这是AI分类😍</div>
+            </div>
+        </div>
+        <div class="message-wrapper">
+            <div class="profile-picture">
+                <img alt="participant" src="img/npc_dota_hero_void_spirit.gif"></div>
+            <div class="message-content">
+                <p class="name">HOPPINAI</p>
+                <div class="message">有问题可以微信🤯 <a class="mention">@zhangqiff19</a></div>
+            </div>
+        </div>
+    </div>
+    <div class="chat-input-area">
+        <input type="text" id="message-input" placeholder="输入开始吧..." maxlength="200">
+        <button id="send-message">发送</button>
+    </div>
+</div>
+
+<!-- 分类列 -->
+<div class="columns-container" id="columns-container">
+    <!-- 分类列将通过JavaScript动态生成 -->
+</div>
+
+<!-- 游戏卡片区域 -->
+<div class="games-container">
+    <h2>游戏列表</h2>
+    <div class="games-grid" id="games-grid">
+        <!-- 游戏卡片将通过JavaScript动态生成 -->
+    </div>
+</div>
+
+<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js'></script>
+<script src="chat.js"></script>
+<script>
+    var gamesData = null;
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // 立即加载数据
+        loadGamesData();
+
+        window.assign_tool = function (itemId, groupId, reason) {
+            assignGameToCategory(itemId, groupId, true, reason);
+        };
+    });
+
+    function initDragAndDrop() {
+        // 获取所有游戏卡片和分类列
+        const gameCards = document.querySelectorAll('.game-card');
+        const dropZones = document.querySelectorAll('.column-drop-zone');
+
+        // 为每个游戏卡片添加拖拽事件
+        gameCards.forEach((card) => {
+            // 使用卡片已有的gameId（从JSON生成时设置的）
+            const gameId = card.dataset.gameId;
+            console.log('Card initialized with gameId:', gameId);
+            // 设置可拖拽
+            card.setAttribute('draggable', 'true');
+
+            // 为了确保dragstart事件中的dataTransfer设置正确，修改拖拽逻辑
+            // 开始拖拽
+            card.addEventListener('dragstart', function (e) {
+                this.classList.add('dragging');
+                // 强制设置dataTransfer，使用正确的gameId
+                e.dataTransfer.setData('text/plain', this.dataset.gameId);
+                // 设置拖拽时的视觉效果
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+
+            // 拖拽结束
+            card.addEventListener('dragend', function () {
+                this.classList.remove('dragging');
+            });
+
+            // 添加点击效果
+            card.addEventListener('mouseenter', function () {
+                this.style.boxShadow = '0 6px 15px rgba(0, 0, 0, 0.2)';
+            });
+
+            card.addEventListener('mouseleave', function () {
+                this.style.boxShadow = '';
+            });
+        });
+
+        // 为每个放置区域添加拖放事件
+        dropZones.forEach(zone => {
+            // 拖拽进入区域
+            zone.addEventListener('dragenter', function (e) {
+                e.preventDefault();
+                this.classList.add('active');
+            });
+
+            // 拖拽悬停在区域
+            zone.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                this.classList.add('active');
+            });
+
+            // 拖拽离开区域
+            zone.addEventListener('dragleave', function () {
+                this.classList.remove('active');
+            });
+
+            // 放置在区域
+            zone.addEventListener('drop', function (e) {
+                e.preventDefault();
+                this.classList.remove('active');
+
+                // 获取拖拽的数据
+                const gameId = e.dataTransfer.getData('text/plain');
+                console.log('Dropped card with gameId:', gameId);
+
+                if (gameId) {
+                    // 使用现有的assignGameToCategory方法处理分配
+                    const category = this.dataset.category;
+
+                    // 先找到原始卡片
+                    const originalCard = document.querySelector(`.games-grid .game-card[data-game-id="${gameId}"]`);
+                    if (originalCard) {
+                        // 分配卡片 - 拖拽时没有reason参数，使用默认值
+                        assignGameToCategory(gameId, category, false, '');
+
+                        // 直接移除原始卡片，不等待
+                        console.log('Removing original card:', gameId);
+                        originalCard.remove();
+                    }
+                }
+            });
+        });
+    }
+
+    // 加载JSON数据
+    async function loadGamesData() {
+        try {
+            const response = await fetch('games-data.json');
+            gamesData = await response.json();
+            console.log('数据加载成功:', gamesData);
+
+            // 动态生成分类列
+            generateCategories();
+            // 动态生成游戏卡片
+            generateGameCards();
+            // 初始化拖拽功能
+            initDragAndDrop();
+            initChat(gamesData);
+            chatHistory.push({
+                "role": "system",
+                "content": getPrompt(gamesData.feature)
+            });
+            chatHistory.push({
+                "role": "user",
+                "content": "下面是我提供的数据：\n" + JSON.stringify(gamesData)+"\n 关注categories的id和items的id"
+            });
+        } catch (error) {
+            console.error('加载数据失败:', error);
+        }
+    }
+
+    // 生成分类列
+    function generateCategories() {
+        const columnsContainer = document.getElementById('columns-container');
+        columnsContainer.innerHTML = '';
+
+        gamesData.categories.forEach(category => {
+            const column = document.createElement('div');
+            column.className = 'category-column';
+            column.id = `column-${category.id}`;
+
+            column.innerHTML = `
+                        <h2>${category.name}</h2>
+                        <div class="column-drop-zone" data-category="${category.id}"></div>
+                    `;
+
+            columnsContainer.appendChild(column);
+        });
+    }
+
+    // 生成游戏卡片
+    function generateGameCards() {
+        const gamesGrid = document.getElementById('games-grid');
+        gamesGrid.innerHTML = '';
+
+        gamesData.items.forEach(game => {
+            const card = document.createElement('div');
+            card.className = 'game-card';
+            card.draggable = true;
+            card.dataset.gameId = game.id;
+
+            const tagsHtml = game.tags.map(tag => `<span>${tag}</span>`).join('');
+
+            card.innerHTML = `
+                        <h3>${game.title}</h3>
+                        <p>${game.description}</p>
+                        <div class="game-meta">
+                            ${tagsHtml}
+                        </div>
+                    `;
+
+            gamesGrid.appendChild(card);
+        });
+    }
+
+    /**
+     * 将游戏卡片分配到指定分类列
+     * @param {string|number} gameId - 游戏卡片的ID或索引
+     * @param {string} category - 分类列ID，可选值：strength,good, top, npc, bad
+     * @param {boolean} showAnimation - 是否显示动画效果
+     * @param {string} reason - AI点评内容
+     * @returns {boolean} - 是否成功分配
+     */
+    function assignGameToCategory(gameId, category, showAnimation = true, reason = '') {
+        // 确保gameId是字符串类型以匹配JSON中的ID
+        const gameIdStr = gameId.toString();
+
+        // 从JSON数据中获取游戏信息（直接使用字符串比较）
+        const game = gamesData.items.find(g => g.id === gameIdStr);
+        if (!game) {
+            console.error('找不到游戏:', gameId);
+            return false;
+        }
+
+        // 获取目标分类列
+        const targetZone = document.querySelector(`.column-drop-zone[data-category="${category}"]`);
+        if (!targetZone) {
+            console.error('未找到指定的分类列:', category);
+            return false;
+        }
+
+        // 检查卡片是否已在该分类中
+        const existingCards = targetZone.querySelectorAll('.game-card');
+        for (let i = 0; i < existingCards.length; i++) {
+            if (existingCards[i].dataset.gameId === gameIdStr) {
+                console.warn('该游戏已在指定分类中:', gameId);
+                return false;
+            }
+        }
+
+        // 创建新卡片
+        const newCard = document.createElement('div');
+        newCard.className = 'game-card';
+        newCard.draggable = true;
+        newCard.dataset.gameId = gameIdStr;
+
+        const tagsHtml = game.tags.map(tag => `<span>${tag}</span>`).join('');
+
+        // 使用传入的reason参数作为AI点评，如果为空则使用默认点评
+        const aiReviewContent = reason || "这是一个很棒的游戏，值得体验！";
+
+        newCard.innerHTML = `
+            <h3>${game.title}</h3>
+            <p>${game.description}</p>
+            <div class="game-meta">
+                ${tagsHtml}
+            </div>
+            <div class="ai-review">
+                <strong>AI点评：</strong>
+                <span>${aiReviewContent}</span>
+            </div>
+        `;
+
+        if (showAnimation) {
+            // 创建动画卡片
+            const gameCard = document.querySelector(`.games-grid .game-card[data-game-id="${gameId}"]`);
+            if (!gameCard) return false; // 如果找不到卡片，直接返回
+            const animCard = gameCard.cloneNode(true);
+            document.body.appendChild(animCard);
+
+            // 获取原卡片和目标区域的位置信息
+            const cardRect = gameCard.getBoundingClientRect();
+            const zoneRect = targetZone.getBoundingClientRect();
+
+            // 设置动画卡片的初始样式
+            animCard.classList.add('animating');
+            animCard.style.left = cardRect.left + 'px';
+            animCard.style.top = cardRect.top + 'px';
+            animCard.style.width = cardRect.width + 'px';
+            animCard.style.height = cardRect.height + 'px';
+
+            // 计算目标位置（目标区域的中心位置）
+            const targetX = zoneRect.left + (zoneRect.width - cardRect.width) / 2;
+            const targetY = zoneRect.top + (zoneRect.height - cardRect.height) / 2 +
+                (targetZone.children.length * (cardRect.height + 10));
+
+            // 执行动画
+            setTimeout(() => {
+                animCard.style.left = targetX + 'px';
+                animCard.style.top = targetY + 'px';
+                animCard.style.opacity = '0.8';
+            }, 10);
+
+            // 动画结束后添加新卡片到目标区域
+            animCard.addEventListener('transitionend', function handler() {
+                animCard.removeEventListener('transitionend', handler);
+
+                // 添加新卡片到目标区域
+                targetZone.appendChild(newCard);
+
+                // 添加缩放动画效果
+                newCard.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    newCard.style.transform = 'scale(1)';
+                }, 150);
+
+                // 移除动画卡片
+                document.body.removeChild(animCard);
+            });
+        } else {
+            // 不显示动画，直接添加到目标区域
+            targetZone.appendChild(newCard);
+        }
+
+        // 为新添加的卡片添加点击删除功能
+        newCard.addEventListener('click', function() {
+            this.remove();
+        });
+
+        return true;
+    }
+
+</script>
+</body>
+</html>
